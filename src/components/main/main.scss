@@ -1,0 +1,75 @@
+/* Define some variables we might want to use elsewhere */
+:root {
+  --fg: #0b2296;
+}
+
+.content {
+  padding: 10px;
+
+}
+
+.activeLink {
+  color: black;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.listsWrap {
+  white-space: nowrap;
+}
+
+.listItem {
+  background: #e2e4e6;
+  padding: 10px;
+  font-size: 14px;
+  width: 270px;
+  margin-right: 10px;
+  margin-bottom: 10px;
+  display: inline-block;
+  vertical-align: top;
+}
+
+input[type="text"] {
+  padding: 5px;
+  margin-bottom: 5px;
+  border: 1px solid #e0d4d4;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mainBtn {
+  -webkit-box-shadow: 0 1px 0 #519839;
+  background: #5aac44;
+  box-shadow: 0 1px 0 #519839;
+  color: #fff;
+  border: none;
+  padding: 5px 10px;
+  outline: none;
+  cursor: pointer;
+}
+
+.listTitle {
+  font-weight: bold;
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+.listBody {
+  margin-bottom: 10px;
+  min-height: 10px;
+}
+
+.cardItem {
+  background: #fbfbfb;
+  border: 1px solid #e8dfdf;
+  padding: 5px;
+  margin-bottom: 5px;
+  cursor: pointer;
+
+  &:hover {
+    background: #f7f7f7;
+  }
+}

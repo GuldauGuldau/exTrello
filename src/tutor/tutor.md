@@ -139,3 +139,67 @@ export default class Form extends React.Component {
   }
 }
 ```
+## Добавление списка
+
+**action/index.js**
+
+```bash
+  export function createList(name) {
+  return {
+    type: 'CREATE_LIST',
+    payload: {
+        uuid: uuid.v4(),
+        name: name,
+        cards: []
+      }
+  };
+  }
+```
+
+**reducers/list.js**
+
+
+```bash
+  case 'CREATE_LIST':
+        return [...state, payload];
+```
+
+## Выводим список карточек для каждого списка
+
+**lists.js**
+
+```bash
+  render() {
+    let lists = this.props.lists;
+    return (
+      ...
+      <CardsList
+        listCards={list.cards}
+        list={list.uuid}
+      />
+      ...
+    )
+```
+**carsLists.js**
+```bash
+  @connect(state => ({ cards: state.cards }))
+  export default class CardsList extends React.Component {
+
+  render() {
+   	const listCards = this.props.listCards;
+    return (
+      <div className={css.listBody}>
+        {(listCards.length>0) && (listCards.map((card, index) => (
+          <Card
+           key={index}
+           card={card}
+           list={this.props.list}
+           />
+        )))}
+      </div>
+    )
+  }
+}
+```
+
+**card.js**

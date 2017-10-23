@@ -68,4 +68,68 @@ const lists = [
     e.preventDefault();
   }
 ```
+## Добавляем функцию для динамической подгрузки формы 
+Параметры isFormList и isFormCard,будут определять для какого элемента показывать форму
 
+**Lists.js**
+
+```bash
+  constructor (props) {
+      super(props);
+      this.state = {
+        isFormList: false,
+        isFormCard: false
+      };
+  }
+  
+  ......
+  
+  //когда функция вызывается с одним параметро name, состояние этого name, меняется на противоположное, когда передается value,
+  состояние становится name = value. Это позволит не грузить одновременно для всех списков по форме. Теперь при клике на ссылку     "Добавить карточку" форма будет добавлена к данному списку, из всех остальных списков форма будет удалена
+  handlerToggleForm = (name, value=false) => {
+    if(value) {
+      (this.state[name] == value) ? this.setState({ [name]: false }) : this.setState({ [name]: value })
+    } else {
+      this.setState({ [name]: !this.state[name] })
+    }
+  }
+  
+  .....
+  
+  render() {
+    let lists = this.props.lists;
+    return (
+      ...
+      // форма для создания списка, в качестве submit, передаем соответствующую функцию
+      { (this.state.isFormList) ? (
+          <div className={css.listItem}>
+            <Form
+             onSubmit={this.handleCreateList}
+             onClose={() => this.handlerToggleForm('isFormList')}
+             />
+          </div>
+        ) : (
+          <div className={css.activeLink + ' ' + css.listItem} onClick={() => this.handlerToggleForm('isFormList')}>Создать список</div>
+        ) }
+      ...
+    )
+```
+**form.js**
+```bash
+  @connect()
+export default class Form extends React.Component {
+  setRef = ref => { this.ref = ref }
+
+  render() {
+    return (
+      <form onSubmit={(e) => this.props.onSubmit(e, this.ref, this.props.uuid, this.props.pos)} >
+        <div>
+          <input ref={this.setRef} type="text" placeholder="Название..." maxLength="30" dir="auto" />
+        </div>
+        <button className={css.mainBtn} type="submit">Создать</button>&nbsp;&nbsp;&nbsp;
+        <span className={css.activeLink} onClick={() => this.props.onClose()}>Закрыть</span>
+      </form>
+    )
+  }
+}
+```

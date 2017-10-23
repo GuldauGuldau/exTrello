@@ -203,3 +203,191 @@ export default class Form extends React.Component {
 ```
 
 **card.js**
+
+```bash
+@connect(state => ({ cards: state.cards }))
+export default class Card extends React.Component {
+
+  render() {
+
+   	const {cardUUID, pos} = this.props.card;
+    const cards = this.props.cards;
+		const card = cards.find(card => card.uuid == cardUUID)
+
+		return (
+			<div className={css.cardItem}>{card.name}</div>
+		)
+  }
+}
+```
+
+## Делаем добавление карточек к списку
+Добавляем форму к каждому списку, в качестве submit передаем функцию handleCreateCard() для создания карточки
+**lists.js**
+
+```bash
+{ (this.state.isFormCard == list.uuid) ? (
+                <div className={css.cardItem}>
+                  <Form
+                  onSubmit={this.handleCreateCard}
+                  uuid={list.uuid}
+                  pos={list.cards.length}
+                  onClose={() => this.handlerToggleForm('isFormCard',  list.uuid)}
+                  />
+                </div>
+              ) : (
+                <div className={css.activeLink} onClick={() => this.handlerToggleForm('isFormCard', list.uuid)}>Добавить карточку</div>
+              ) }
+```
+(здесь я не совсем удачно сделала, правильней наверно было задать dispatch функцией и cardUUID задавать в экшенах)
+```bash
+handleCreateCard = (e, ref, list, pos) => {
+    const cardUUID = uuid.v4();
+    if(ref.value) {
+      this.props.dispatch(createCard(ref.value, cardUUID));
+      this.props.dispatch(addCardToList(list, cardUUID, (pos+1)));
+      ref.value = '';
+      this.handlerToggleForm('isFormCard', list);
+    }
+    e.preventDefault();
+  }
+```
+**reducer/card.js**
+```bash
+case 'ADD_CARD_TO_LIST':
+        return state.map(list => {
+          if(list.uuid == payload.listUUID) {
+            return ({...list, cards: List(list.cards).push(payload.newCard).toArray()});
+          }
+          return list;
+        });
+```
+
+## Реализуем drag-and-drop
+В документации есть пример с простой сортировкой. Берем его за основу, адапитруем под наши задачи
+@DragDropContext будем использовать на компоненте Cards(списке карточек). @DragSource и @DropTarget на дочернем компоненте card.
+Добавляем функцию moveCard, которая будет ловить hover  и диспатчить состояния.
+(позже я поняла что hover надо было ловить на родительском элементе, иначе не работает перетаскивание карточки в пустой список (((((
+
+**cardList.js**
+```bash
+moveCard = (dragCard, dragList, hoverCard, hoverList) => {
+    if(dragList == hoverList) {
+      this.props.dispatch(moveCard(dragCard, hoverCard, dragList));
+    } else {
+      this.props.dispatch(moveCardToList(dragCard, dragList, hoverCard, hoverList));
+    }
+  }
+```
+
+**card.js**
+```bash
+  ...
+  const cardSource = {
+	beginDrag(props) {
+		return {
+			card: props.card,
+			list: props.list
+		}
+	},
+}
+
+const cardTarget = {
+	hover(props, monitor, component) {
+		const dragCard = monitor.getItem().card
+		const hoverCard = props.card
+		const dragList = monitor.getItem().list
+		const hoverList = props.list
+
+		// Don't replace items with themselves
+		if (dragCard.cardUUID == hoverCard.cardUUID) {
+			return
+		}
+    
+    ...
+
+		props.moveCard(dragCard, dragList, hoverCard, hoverList)
+  
+	},
+}
+
+@DropTarget(ItemTypes.CARD, cardTarget, connect => ({
+	connectDropTarget: connect.dropTarget(),
+}))
+@DragSource(ItemTypes.CARD, cardSource, (connect, monitor) => ({
+	connectDragSource: connect.dragSource(),
+	isDragging: monitor.isDragging(),
+}))
+...
+```
+Добавляем в reducer события. Здесь у меня совсем нехорошо получилось. Это надо переписать!
+И Immutable я использую только в редьюссерах, это тоже бы надо переделать((
+
+**reducer/lists.js**
+```bash
+  case 'MOVE_CARD':
+        let res = state.map(list => {
+        // если это лист на котором перетаскивали карточку
+          if(list.uuid == payload.dragList) {
+              let cards = List().concat(List(list.cards).map(card => {
+                //если это карточка которую перетаскивали
+                if(card.cardUUID == payload.dragCard.cardUUID)
+                  //меняем ее позицию на новую
+                  return Map(card).set('pos', payload.hoverCard.pos).toObject()
+                  
+                 // если это карточка с событием hover 
+                else if(card.cardUUID == payload.hoverCard.cardUUID)
+                // меняем ее позицию на новую
+                return Map(card).set('pos', payload.dragCard.pos).toObject()
+                else
+                  return card
+               // сортируем учитывая новые позиций
+              }).sort((a, b) => a.pos - b.pos)).toArray();
+
+              return ({...list, cards: cards});
+          }
+          return list;
+        });
+        return res;
+```
+
+```bash
+  case 'MOVE_CARD_TO_LIST':
+        return List(state).map(list => {
+          // если это список из которого перетаскивали
+          if(list.uuid == payload.dragList) {
+            let cardsDrag = List(list.cards)
+                            // удаляем карточку, которую перетащили
+                           .filter(card => card.cardUUID !== payload.dragCard.cardUUID)
+                           .map(card => {
+                            // сдвигаем позиций всех карточек на одну назад
+                             if(card.pos > payload.dragCard.pos) return Map(card).set('pos', +card.pos-1).toObject()
+                             return card
+                           }).toArray();
+
+            return ({...list, cards: cardsDrag});
+          }
+          // если это список в который перетаскивали
+          if(list.uuid == payload.hoverList) {
+            // ищем в этом списке карточку с uuid перетаскиваемой карточки (чтобы не было дублей)
+            let isCard = List(list.cards).find(card => {
+              return card.cardUUID == payload.dragCard.cardUUID
+            });
+            // если не находим, то добавляем ее к списку
+            if(!isCard) {
+              let cardsHover = List().concat(List(list.cards)
+                              .map(card => {
+                                // сдвигаем позиций карточек ниже по списку на единицу
+                                 if(card.pos >= payload.hoverCard.pos) return Map(card).set('pos', +card.pos+1).toObject()
+                                 return card
+                               })
+                               // добавляем карточку
+                               .push({cardUUID: payload.dragCard.cardUUID, pos: payload.hoverCard.pos})
+                               // сортируем, учитывая изменившиеся позиций
+                               .sort((a, b) => a.pos - b.pos)).toArray();
+              return ({...list, cards: cardsHover});
+            };
+          }
+          return list
+        }).toArray();
+```

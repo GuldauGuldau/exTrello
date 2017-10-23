@@ -73,7 +73,6 @@ const cardTarget = {
 	connectDragSource: connect.dragSource(),
 	isDragging: monitor.isDragging(),
 }))
-@connect(state => ({ cards: state.cards }))
 export default class Card extends React.Component {
 
   render() {

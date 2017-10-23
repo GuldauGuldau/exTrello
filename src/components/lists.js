@@ -67,7 +67,6 @@ export default class Lists extends React.Component {
               <div className={css.listTitle}>{list.name}</div>
                 <CardsList
                  listCards={list.cards}
-                 moveCard={this.moveCard}
                  list={list.uuid}
                 />
 
@@ -76,7 +75,7 @@ export default class Lists extends React.Component {
                   <Form
                   onSubmit={this.handleCreateCard}
                   uuid={list.uuid}
-                  pos={Object.keys(list.cards).length}
+                  pos={list.cards.length}
                   onClose={() => this.handlerToggleForm('isFormCard',  list.uuid)}
                   />
                 </div>
